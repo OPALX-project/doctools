@@ -1,0 +1,42 @@
+= Publishing the OPAL and pyOPALTools Manual 
+
+== Introduction
+
+For the time being we run this process on the decommisioned AFS fileserver `afsfs06.psi.ch`.
+
+== Why a container?
+
+TBW
+
+== Create a new Docker image
+
+Run 
+
+----
+./build.sh
+----
+
+== Create a new Docker container
+
+----
+docker run --name manualupdater --user opalci:opalci -v /afs:/afs  -dit opal/manualbuilder:0.0.8
+----
+
+== Updating the manuals
+
+----
+/home/opalci/scripts/run_with_token docker exec manualupdater  /home/opalci/scripts/update
+----
+
+== CRON configuration
+
+./etc/cron.d/opal_manual_update 
+----
+MAILTO="achim.gsell@psi.ch"
+
+1 1 * * *       opalci  docker start manualupdater
+5 1 * * *       opalci  /home/opalci/scripts/run_with_token docker exec manualupdater /home/opalci/scripts/update &> /home/opalci/update
+----
+
+
+

@@ -1,0 +1,42 @@
+#!/bin/bash
+#
+mydir=$(dirname "$0")
+declare -r mydir=$(cd "${mydir}" && pwd)
+
+declare -r OPAL_doc_dirs='/afs/psi.ch/project/amas/webhosting/opal/Documentation'
+declare -r pyOPALTools_doc_dir='/home/opalci/pyOPALTools/doc'
+declare -r pyOPALTools_target_dir='/afs/psi.ch/project/amas/webhosting/docs/pyOPALTools'
+
+usage() {
+	echo "`basename $0` [--force]" 1>&2
+	exit 1
+}
+
+update() {
+	"${mydir}/update_OPAL_doc" \
+		--docdir "${OPAL_doc_dirs}" \
+		"$@"
+	"${mydir}/update_sphinx_doc" \
+		--docdir "${pyOPALTools_doc_dir}" \
+		--targetdir "${pyOPALTools_target_dir}" \
+		"$@"
+}
+
+main() {
+	local args=()
+	while (( $# > 0 )); do
+		case $1 in
+		--force )
+			args+=( '--force' )
+			;;
+		* )
+			usage
+			;;
+		esac
+		shift 1
+	done
+	update "${args[@]}"
+}
+
+main "$@"
+

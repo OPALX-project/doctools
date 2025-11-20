@@ -1,0 +1,73 @@
+#!/bin/bash
+
+mydir=$(dirname "$0")
+mydir=$(cd "${mydir}" && pwd)
+
+usage() {
+	echo "Usage: $(basename $0) --docdir DOC_DIR --targetdir TARGET_DIR [--force]" 1>&2
+	exit 1
+}
+
+update_doc() {
+    local -r _target_dir="$1"
+	echo "Updating documentation ..."
+	git pull
+	export O="\-E"
+	make html
+	cd build/html
+	cp -av * "${_target_dir}"
+}
+
+update() {
+	local -r _doc_dir="$1"
+	local -r _target_dir="$2"
+	local -r _force="$3"
+	{
+		cd "${_doc_dir}"
+		if [[ ${_force} == 'no' ]]; then
+		    "${mydir}/check_upstream_changed" || return 0
+		fi
+		update_doc "${_target_dir}"
+	}
+}
+
+main() {
+	local opt_force='no'
+	local doc_dir=''
+	local target_dir=''
+
+	while (( $# > 0 )); do
+        	case $1 in
+            	--docdir )
+                	doc_dir="$2"
+                	shift 1
+                	;;
+            	--targetdir )
+                	target_dir="$2"
+                	shift 1
+                	;;
+                --force )
+                	opt_force='yes'
+			;;
+		* )
+			usage
+			;;
+		esac
+        	shift 1
+	done
+	if [[ -z ${doc_dir} ]]; then
+		echo "Argument '--docdir' missing" 1>&2
+		usage
+	fi
+	if [[ -z ${target_dir} ]]; then
+		echo "Argument '--targetdir' missing" 1>&2
+		usage
+	fi
+	if [[ ! -r "${doc_dir}" ]]; then
+		echo "No permissions to read '${doc_dir}'!" 1>&2
+		exit 3
+	fi
+	update "${doc_dir}" "${target_dir}" "${opt_force}"
+}
+
+main "$@"

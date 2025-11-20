@@ -1,0 +1,38 @@
+#!/bin/bash
+#
+# PLEASE NOTE:
+# We are running in 'sh' mode. BASH extensions are *not* available!
+#
+keytab="${HOME}/.keytab"
+PRINCIPAL_NAME='svcusr-amas_regr@D.PSI.CH'
+
+mydir=$(dirname "$0")
+mydir=$(cd "${mydir}" && pwd)
+
+
+usage() {
+	echo "$(basename $0) PROG [ARGS...]" 1>&2
+	exit 1
+}
+
+main() {
+	prog="$1"
+	shift
+	if ! which "${prog}" &> /dev/null ; then
+		echo "${prog}: does not exist or is not executable!" 1>&2
+		exit 3
+	fi
+	if [ -r "${keytab}" ]; then
+		export KRB5CCNAME=$(mktemp /tmp/krb5cc_$(id -u)_XXXXXX)
+		/usr/bin/kinit -t "${keytab}" -k "${PRINCIPAL_NAME}"	|| exit 2
+		/usr/bin/aklog						|| exit 2
+	fi
+	"${prog}" "$@"
+	if [ -r "${keytab}" ]; then
+		/usr/bin/unlog
+		/usr/bin/kdestroy
+	fi
+}
+
+main "$@"
+

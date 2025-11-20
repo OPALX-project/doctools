@@ -1,0 +1,78 @@
+#!/bin/bash
+
+mydir=$(dirname "$0")
+mydir=$(cd "${mydir}" && pwd)
+
+declare opt_force='no'
+declare opt_html='yes'
+declare opt_pdf='yes'
+
+usage() {
+	echo "Usage: $(basename $0) --docdir DOC_DIR [--force] [--html] [--pdf]" 1>&2
+	exit 1
+}
+
+update_doc() {
+	echo "Updating manual..."
+	git pull
+	if [[ ${opt_html} == 'yes' ]]; then
+		"${mydir}"/../manual2x/manual2html
+	fi
+	if [[ ${opt_pdf} == 'yes' ]]; then
+		"${mydir}"/../manual2x/manual2pdf
+	fi
+}
+
+update() {
+	local -r _doc_dir="$1"
+	local -r _force="$2"
+	{
+		cd "${_doc_dir}"
+		if [[ ${_force} == 'no' ]]; then
+			"${mydir}/check_upstream_changed" || return 0
+		fi
+		update_doc
+	}
+}
+
+main() {
+	local doc_dir=''
+
+	while (( $# > 0 )); do
+        	case $1 in
+            	--docdir )
+                	doc_dirs="$2"
+                	shift 1
+                	;;
+                --force )
+                	opt_force='yes'
+			;;
+		--html )
+			opt_html='yes'
+			opt_pdf='no'
+			;;
+		--pdf )
+			opt_html='no'
+			opt_pdf='yes'
+			;;
+		* )
+			usage
+			;;
+		esac
+        	shift 1
+	done
+	if [[ -z ${doc_dirs} ]]; then
+		echo "Argument '--docdir' missing" 1>&2
+		usage
+	fi
+	if [[ ! -r "${doc_dirs}" ]]; then
+		echo "No permissions to read '${doc_dirs}'!" 1>&2
+		exit 3
+	fi
+	for d in "${doc_dirs}"/*; do
+		[[ -d "${d}/.git" ]] || continue
+		update "$d" "${opt_force}"
+	done
+}
+
+main "$@"

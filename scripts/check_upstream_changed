@@ -1,0 +1,47 @@
+#!/bin/bash
+
+get_git_status() {
+	git remote update
+	local UPSTREAM=${1:-'@{u}'}
+	local LOCAL=$(git rev-parse @)
+	local REMOTE=$(git rev-parse "$UPSTREAM")
+	local BASE=$(git merge-base @ "$UPSTREAM")
+
+	if [ $LOCAL = $REMOTE ]; then
+		#echo "Up-to-date"
+		return 0
+	elif [ $LOCAL = $BASE ]; then
+		#echo "Need to pull"
+		return 1
+	elif [ $REMOTE = $BASE ]; then
+		#echo "Need to push"
+		return 2
+	else
+		#echo "Diverged"
+		return 3
+	fi
+}
+
+check_upstream_changed() {
+	local cur_dir="$PWD"
+	echo "${cur_dir}"
+	if ! git rev-parse --is-inside-work-tree &> /dev/null; then
+		echo "${cur_dir}: not a git repository!" 1>&2
+		return 1
+	fi
+	get_git_status
+	local -i status=$?
+	if ((status == 0)); then
+		echo "Manual is up to date!"
+		return 1
+	elif ((status == 2)); then
+		echo "Local changes need to be pushed!" 1>&2
+		return 1
+	elif ((statis == 3)); then
+		echo "Branches diverged!" 1>&2
+		return 1
+	fi
+	return 0
+}
+
+check_upstream_changed
